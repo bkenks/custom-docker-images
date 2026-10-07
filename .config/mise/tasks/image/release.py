@@ -3,11 +3,40 @@
 # requires-python = ">=3.14"
 # ///
 #MISE description="Validate a release tag and publish a GitHub release at the current pushed commit"
-#USAGE arg "<tag>" help="Release tag, e.g. nginx/1.27.3-r1"
+#MISE raw=true
 
 import os
 import subprocess
 import sys
+import json
+from pathlib import Path
+
+def get_image_tag_names() -> dict[str, str]:
+    data = json.loads(Path(os.environ["PATHFILE_DATA"]).read_text())
+    return data["images"]
+
+
+def prompt_image_tag_name(image_tag_names: dict[str, str]) -> str:
+    for image, tag_name in image_tag_names.items():
+        print(f"  {image} -> {tag_name}")
+    image = input("image alias: ").strip()
+    if image not in image_tag_names:
+        sys.exit(f"image:release: unknown image alias '{image}'; expected one of the above")
+    return image_tag_names[image]
+
+
+def prompt_revision() -> str:
+    revision = input("revision: ").strip()
+    if not revision.isdigit():
+        sys.exit(f"image:release: revision '{revision}' must be a number")
+    return revision
+
+
+def compose_release_tag() -> str:
+    tag_name = prompt_image_tag_name(get_image_tag_names())
+    version = input("version: ").strip()
+    revision = prompt_revision()
+    return f"{tag_name}/{version}-r{revision}"
 
 
 def get_git_output(*args: str) -> str:
@@ -33,6 +62,6 @@ def publish_release(tag: str) -> None:
 
 
 try:
-    publish_release(os.environ["usage_tag"])
+    publish_release(compose_release_tag())
 except subprocess.CalledProcessError as error:
     sys.exit(error.returncode)

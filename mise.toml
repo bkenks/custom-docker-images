@@ -1,3 +1,6 @@
+[env]
+PATHFILE_DATA = "{{config_root}}/.config/data.json"
+
 [tools]
 actionlint             = "1.7.12"
 "aqua:numtide/treefmt" = "2.6.0"

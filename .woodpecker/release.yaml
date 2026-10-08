@@ -1,0 +1,23 @@
+when:
+  - event: release
+
+steps:
+  - name: parse-release-tag
+    image: ghcr.io/astral-sh/uv:0.12-python3.14-trixie-slim
+    commands:
+      - scripts/parse-release-tag.py "$${CI_COMMIT_TAG}" > release-tag.env
+      - sed -n 's/^\(version\|upstream\)=//p' release-tag.env > .tags
+      - echo latest >> .tags
+
+  - name: build-and-push
+    image: woodpeckerci/plugin-docker-buildx:6.1.1
+    settings:
+      registry: ghcr.io
+      repo: ghcr.io/${CI_REPO_OWNER,,}/${CI_COMMIT_TAG%%/*}
+      context: images/${CI_COMMIT_TAG%%/*}
+      dockerfile: images/${CI_COMMIT_TAG%%/*}/Dockerfile
+      platforms: linux/amd64,linux/arm64
+      tags_file: .tags
+      username: ${CI_REPO_OWNER}
+      password:
+        from_secret: ghcr_token
